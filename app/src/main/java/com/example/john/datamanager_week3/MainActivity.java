@@ -4,9 +4,12 @@ import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.net.ConnectivityManager;
+import android.net.TrafficStats;
 import android.os.Build;
+import android.os.Handler;
 import android.provider.Settings;
 import android.support.v4.view.MenuItemCompat;
+import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.support.v7.widget.SwitchCompat;
@@ -17,6 +20,7 @@ import android.view.MenuItem;
 import android.view.View;
 import android.widget.CompoundButton;
 import android.widget.Switch;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import java.lang.reflect.Method;
@@ -24,12 +28,55 @@ import java.lang.reflect.Method;
 public class MainActivity extends AppCompatActivity {
 
     SwitchCompat mainSwitchOnOffSw;
+    TextView tv_conn;
+
+    //getting sent and received data
+    private Handler mHandler = new Handler();
+    private long mStartRX = 0;
+    private long mStartTX = 0;
+
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        tv_conn = (TextView) findViewById(R.id.connType);
+
+        //getting sent and received data
+        mStartRX = TrafficStats.getTotalRxBytes();
+        mStartTX = TrafficStats.getTotalTxBytes();
+
+        // check wether the device support the statistics
+        if (mStartRX == TrafficStats.UNSUPPORTED || mStartTX == TrafficStats.UNSUPPORTED) {
+
+            Toast.makeText(this, "Your device does not support traffic stat monitoring.", Toast.LENGTH_LONG).show();
+
+        } else {
+            mHandler.postDelayed(mRunnable, 1000);
+        }
     }
+
+    private final Runnable mRunnable = new Runnable() {
+        public void run() {
+
+            // getTotalRxBytes, returns number of packets received across mobile networks since device boot.
+
+            if(isDataEnabled()){
+                TextView RX = (TextView) findViewById(R.id.RX);
+                TextView TX = (TextView) findViewById(R.id.TX);
+                long rxBytes = (TrafficStats.getTotalRxBytes() - mStartRX) / 1024;
+                RX.setText("RX: "+Long.toString(rxBytes)+"kb");
+                long txBytes = (TrafficStats.getTotalTxBytes() - mStartTX) / 1024;
+                TX.setText("TX: "+Long.toString(txBytes)+"kb");
+                mHandler.postDelayed(mRunnable, 1000);
+
+            }
+
+
+        }
+    };
+
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
@@ -128,16 +175,15 @@ public class MainActivity extends AppCompatActivity {
                 }else{
                     // create a method to turn on data for elder versions and call it here.
 
-
-                }
+                 }
              }else{
 
-                Toast.makeText(getBaseContext(),"Data is on",Toast.LENGTH_SHORT).show();
 
                 String network_class = getNetworkClass(getBaseContext());
 
-                Toast.makeText(getBaseContext(),"Connection Type: "+network_class,Toast.LENGTH_SHORT).show();
+               // Toast.makeText(getBaseContext(),"Connection Type: "+network_class,Toast.LENGTH_SHORT).show();
 
+                tv_conn.setText("Connected to: "+network_class);
             }
         }else{
 
@@ -149,5 +195,8 @@ public class MainActivity extends AppCompatActivity {
 
         }
     }
+
+
+
 
 }
